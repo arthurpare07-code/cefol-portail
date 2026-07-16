@@ -59,3 +59,10 @@ export default function App() {
 
           <Route path="/vendeur" element={<RequireAuth><Layout><VendeurDashboard /></Layout></RequireAuth>} />
           <Route path="/vendeur/agenda" element={<RequireAuth><Layout><MonAgenda /></Layout></RequireAuth>} />
+
+          <Route path="/client" element={<RequireAuth><Layout><ClientDashboard /></Layout></RequireAuth>} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}
