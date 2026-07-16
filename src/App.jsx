@@ -7,9 +7,11 @@ import AdminProfs from './pages/admin/Profs'
 import AdminVendeurs from './pages/admin/Vendeurs'
 import AdminClients from './pages/admin/Clients'
 import AdminImport from './pages/admin/Import'
+import AdminAgendas from './pages/admin/Agendas'
 import ProfDashboard from './pages/prof/ProfDashboard'
 import VendeurDashboard from './pages/vendeur/VendeurDashboard'
 import ClientDashboard from './pages/client/ClientDashboard'
+import MonAgenda from './pages/shared/MonAgenda'
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -45,23 +47,15 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<RequireAuth><RoleRedirect /></RequireAuth>} />
 
-          {/* Admin */}
           <Route path="/admin" element={<RequireAuth><Layout><AdminDashboard /></Layout></RequireAuth>} />
           <Route path="/admin/profs" element={<RequireAuth><Layout><AdminProfs /></Layout></RequireAuth>} />
           <Route path="/admin/vendeurs" element={<RequireAuth><Layout><AdminVendeurs /></Layout></RequireAuth>} />
           <Route path="/admin/clients" element={<RequireAuth><Layout><AdminClients /></Layout></RequireAuth>} />
           <Route path="/admin/import" element={<RequireAuth><Layout><AdminImport /></Layout></RequireAuth>} />
+          <Route path="/admin/agendas" element={<RequireAuth><Layout><AdminAgendas /></Layout></RequireAuth>} />
 
-          {/* Prof */}
           <Route path="/prof" element={<RequireAuth><Layout><ProfDashboard /></Layout></RequireAuth>} />
+          <Route path="/prof/agenda" element={<RequireAuth><Layout><MonAgenda /></Layout></RequireAuth>} />
 
-          {/* Vendeur */}
           <Route path="/vendeur" element={<RequireAuth><Layout><VendeurDashboard /></Layout></RequireAuth>} />
-
-          {/* Client */}
-          <Route path="/client" element={<RequireAuth><Layout><ClientDashboard /></Layout></RequireAuth>} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
-  )
-}
+          <Route path="/vendeur/agenda" element={<RequireAuth><Layout><MonAgenda /></Layout></RequireAuth>} />
