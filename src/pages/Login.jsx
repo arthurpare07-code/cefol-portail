@@ -5,7 +5,7 @@ export default function Login() {
   const { signIn, signInMagicLink } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [mode, setMode] = useState('password') // 'password' | 'magic'
+  const [mode, setMode] = useState('password')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -15,14 +15,17 @@ export default function Login() {
     setError('')
     setSuccess('')
     setLoading(true)
-
-    if (mode === 'password') {
-      const { error } = await signIn(email, password)
-      if (error) setError('Email ou mot de passe incorrect.')
-    } else {
-      const { error } = await signInMagicLink(email)
-      if (error) setError('Impossible d\'envoyer le lien. Vérifiez l\'adresse email.')
-      else setSuccess('Lien de connexion envoyé ! Vérifiez votre boîte mail.')
+    try {
+      if (mode === 'password') {
+        const { error } = await signIn(email, password)
+        if (error) setError('Erreur : ' + error.message)
+      } else {
+        const { error } = await signInMagicLink(email)
+        if (error) setError('Erreur : ' + error.message)
+        else setSuccess('Lien de connexion envoyé ! Vérifiez votre boîte mail.')
+      }
+    } catch (err) {
+      setError('Erreur technique : ' + (err?.message || String(err)))
     }
     setLoading(false)
   }
@@ -30,7 +33,6 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo / Entête */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-brand rounded-2xl mb-4 shadow-lg">
             <span className="text-white font-display font-bold text-xl">C</span>
@@ -40,7 +42,6 @@ export default function Login() {
         </div>
 
         <div className="card p-6">
-          {/* Toggle mode */}
           <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
             <button
               onClick={() => { setMode('password'); setError(''); setSuccess('') }}
@@ -81,7 +82,7 @@ export default function Login() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="input"
-                  placeholder="••••••••"
+                  placeholder="mot de passe"
                   required
                 />
               </div>
@@ -105,7 +106,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          Problème de connexion ? Contactez l'administration.
+          Probleme de connexion ? Contactez l'administration.
         </p>
       </div>
     </div>
