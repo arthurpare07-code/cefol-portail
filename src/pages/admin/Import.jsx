@@ -1,56 +1,68 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import * as XLSX from 'xlsx'
-import { Upload, FileSpreadsheet, Check, AlertCircle } from 'lucide-react'
+import { Upload, Check, AlertCircle } from 'lucide-react'
+
+function excelDate(v) {
+  if (!v) return null
+  if (typeof v === 'number') {
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000))
+    return d.toISOString().slice(0, 10)
+  }
+  return String(v)
+}
 
 const TEMPLATES = [
   {
+    id: 'stagiaires',
+    label: 'Stagiaires (clients)',
+    description: 'Fiche de chaque stagiaire : heures, avancement, notes TEF',
+    table: 'stagiaires',
+    conflict: 'email',
+    resolver: (row) => ({
+      email: String(row.email || '').trim().toLowerCase(),
+      nom_complet: row.nom_complet || '',
+      heures_commandees: Number(row.heures_commandees) || 0,
+      heures_realisees: Number(row.heures_realisees) || 0,
+      avancement: Number(row.avancement_pct) || 0,
+      niveau: row.niveau || null,
+      groupe: row.groupe || null,
+      type_parcours: row.type_parcours || null,
+      date_debut: excelDate(row.date_debut),
+      date_fin: excelDate(row.date_fin),
+      tef_objectif: row.tef_objectif || null,
+      tef_note_ce: row.tef_note_ce ? Number(row.tef_note_ce) : null,
+      tef_note_co: row.tef_note_co ? Number(row.tef_note_co) : null,
+      tef_note_ee: row.tef_note_ee ? Number(row.tef_note_ee) : null,
+      tef_note_eo: row.tef_note_eo ? Number(row.tef_note_eo) : null,
+    }),
+  },
+  {
+    id: 'seances',
+    label: 'Seances (cours)',
+    description: 'Planning des cours de chaque stagiaire',
+    table: 'seances',
+    conflict: null,
+    resolver: (row) => ({
+      stagiaire_email: String(row.email_stagiaire || '').trim().toLowerCase(),
+      reference: row.titre_seance || '',
+      date_prevue: excelDate(row.date_prevue),
+      statut: row.statut || null,
+      heures_cumulees: row.heures_cumulees ? Number(row.heures_cumulees) : null,
+      notes: row.notes || null,
+    }),
+  },
+  {
     id: 'cours',
-    label: 'Planning des cours',
+    label: 'Planning des cours (profs)',
     description: 'Colonnes : email_prof, jour, heure_debut, heure_fin, groupe, salle',
-    columns: ['email_prof', 'jour', 'heure_debut', 'heure_fin', 'groupe', 'salle'],
     table: 'cours',
+    conflict: null,
     resolver: async (row) => {
       const { data: prof } = await supabase.from('profiles').select('id').eq('email', row.email_prof).single()
       if (!prof) return null
       return { prof_id: prof.id, jour: row.jour, heure_debut: row.heure_debut, heure_fin: row.heure_fin, groupe: row.groupe, salle: row.salle }
-    }
-  },
-  {
-    id: 'sessions_tef',
-    label: 'Sessions TEF IRN',
-    description: 'Colonnes : email_prof, date (JJ/MM/AAAA), heure, lieu, remarques',
-    columns: ['email_prof', 'date', 'heure', 'lieu', 'remarques'],
-    table: 'sessions_tef',
-    resolver: async (row) => {
-      const { data: prof } = await supabase.from('profiles').select('id').eq('email', row.email_prof).single()
-      if (!prof) return null
-      return { prof_id: prof.id, date: row.date, heure: row.heure, lieu: row.lieu, remarques: row.remarques }
-    }
-  },
-  {
-    id: 'conges',
-    label: 'Congés vendeurs',
-    description: 'Colonnes : email_vendeur, annee, mois (1-12), jours_gagnes',
-    columns: ['email_vendeur', 'annee', 'mois', 'jours_gagnes'],
-    table: 'conges',
-    resolver: async (row) => {
-      const { data: v } = await supabase.from('profiles').select('id').eq('email', row.email_vendeur).single()
-      if (!v) return null
-      return { vendeur_id: v.id, annee: Number(row.annee), mois: Number(row.mois), jours_gagnes: Number(row.jours_gagnes) }
-    }
-  },
-  {
-    id: 'heures_client',
-    label: 'Heures clients',
-    description: 'Colonnes : email_client, description, heures_utilisees, date',
-    columns: ['email_client', 'description', 'heures_utilisees', 'date'],
-    table: 'heures_client',
-    resolver: async (row) => {
-      const { data: c } = await supabase.from('clients').select('id').eq('email', row.email_client).single()
-      if (!c) return null
-      return { client_id: c.id, description: row.description, heures_utilisees: Number(row.heures_utilisees), date: row.date }
-    }
+    },
   },
 ]
 
@@ -58,7 +70,7 @@ export default function Import() {
   const [template, setTemplate] = useState(TEMPLATES[0])
   const [preview, setPreview] = useState([])
   const [file, setFile] = useState(null)
-  const [status, setStatus] = useState(null) // null | 'loading' | 'success' | 'error'
+  const [status, setStatus] = useState(null)
   const [result, setResult] = useState({ imported: 0, errors: 0 })
   const inputRef = useRef()
 
@@ -85,10 +97,25 @@ export default function Import() {
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
       let imported = 0, errors = 0
 
+      if (template.id === 'seances') {
+        const emails = [...new Set(rows.map(r => String(r.email_stagiaire || '').trim().toLowerCase()).filter(Boolean))]
+        for (const em of emails) {
+          await supabase.from('seances').delete().eq('stagiaire_email', em)
+        }
+      }
+
       for (const row of rows) {
-        const resolved = await template.resolver(row)
-        if (!resolved) { errors++; continue }
-        const { error } = await supabase.from(template.table).upsert(resolved)
+        let resolved = template.resolver.constructor.name === 'AsyncFunction'
+          ? await template.resolver(row)
+          : template.resolver(row)
+        if (!resolved || !Object.values(resolved).some(v => v)) { errors++; continue }
+
+        let error
+        if (template.conflict) {
+          ({ error } = await supabase.from(template.table).upsert(resolved, { onConflict: template.conflict }))
+        } else {
+          ({ error } = await supabase.from(template.table).insert(resolved))
+        }
         if (error) errors++; else imported++
       }
 
@@ -98,33 +125,23 @@ export default function Import() {
     reader.readAsArrayBuffer(file)
   }
 
-  function downloadTemplate() {
-    const ws = XLSX.utils.aoa_to_sheet([template.columns])
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Template')
-    XLSX.writeFile(wb, `template_${template.id}.xlsx`)
-  }
-
   return (
     <div>
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-gray-900">Importer Excel</h1>
-        <p className="text-gray-500 text-sm mt-1">Importez vos données depuis un fichier .xlsx ou .csv</p>
+        <p className="text-gray-500 text-sm mt-1">Importez vos donnees depuis un fichier .xlsx ou .csv</p>
       </div>
 
       <div className="grid grid-cols-2 gap-5">
-        {/* Choix du type */}
         <div className="card p-5">
-          <h2 className="font-semibold text-gray-900 mb-3 text-sm">Type de données</h2>
+          <h2 className="font-semibold text-gray-900 mb-3 text-sm">Type de donnees</h2>
           <div className="space-y-2">
             {TEMPLATES.map(t => (
               <button
                 key={t.id}
                 onClick={() => { setTemplate(t); setPreview([]); setFile(null); setStatus(null) }}
                 className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${
-                  template.id === t.id
-                    ? 'border-brand bg-brand-light'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  template.id === t.id ? 'border-brand bg-brand-light' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
                 <p className={`text-sm font-medium ${template.id === t.id ? 'text-brand' : 'text-gray-900'}`}>{t.label}</p>
@@ -132,75 +149,8 @@ export default function Import() {
               </button>
             ))}
           </div>
-
-          <button onClick={downloadTemplate} className="btn-secondary w-full mt-4 text-sm flex items-center justify-center gap-2">
-            <FileSpreadsheet size={15} />
-            Télécharger le modèle Excel
-          </button>
         </div>
 
-        {/* Upload + import */}
         <div className="space-y-4">
           <div className="card p-5">
-            <h2 className="font-semibold text-gray-900 mb-3 text-sm">Fichier à importer</h2>
-            <div
-              onClick={() => inputRef.current.click()}
-              className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-brand hover:bg-brand-light/50 transition-colors"
-            >
-              <Upload size={28} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm font-medium text-gray-700">{file ? file.name : 'Cliquez pour sélectionner'}</p>
-              <p className="text-xs text-gray-400 mt-1">.xlsx, .xls, .csv</p>
-            </div>
-            <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => e.target.files[0] && parseFile(e.target.files[0])} />
-          </div>
-
-          {preview.length > 0 && (
-            <div className="card p-5">
-              <p className="text-sm font-medium text-gray-900 mb-2">Aperçu ({preview.length} premières lignes)</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr>
-                      {Object.keys(preview[0]).map(k => (
-                        <th key={k} className="text-left text-gray-400 font-medium pb-1.5 pr-3">{k}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.map((row, i) => (
-                      <tr key={i}>
-                        {Object.values(row).map((v, j) => (
-                          <td key={j} className="text-gray-700 pr-3 py-1 truncate max-w-24">{String(v)}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {file && (
-            <button onClick={doImport} disabled={status === 'loading'} className="btn-primary w-full">
-              {status === 'loading' ? 'Import en cours…' : `Importer dans "${template.label}"`}
-            </button>
-          )}
-
-          {status === 'success' && (
-            <div className="flex items-center gap-2 bg-green-50 border border-green-100 text-green-700 px-4 py-3 rounded-lg text-sm">
-              <Check size={16} />
-              {result.imported} ligne(s) importée(s) avec succès
-              {result.errors > 0 && ` · ${result.errors} ignorée(s)`}
-            </div>
-          )}
-          {status === 'error' && result.imported === 0 && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-lg text-sm">
-              <AlertCircle size={16} />
-              Erreur d'importation. Vérifiez les colonnes du fichier.
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+            <h2 className="font-semibold text-gray-900 mb-3 text-sm">Fichier a importer</h2>
