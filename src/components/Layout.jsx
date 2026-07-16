@@ -1,8 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
-  LayoutDashboard, Calendar, FileText, Users, Umbrella,
-  Upload, LogOut, BookOpen, ClipboardList
+  LayoutDashboard, Calendar, Users, Upload, LogOut, BookOpen, ClipboardList
 } from 'lucide-react'
 
 const navByRole = {
@@ -11,20 +10,19 @@ const navByRole = {
     { to: '/admin/profs', icon: BookOpen, label: 'Profs & planning' },
     { to: '/admin/vendeurs', icon: Users, label: 'Vendeurs & congés' },
     { to: '/admin/clients', icon: ClipboardList, label: 'Clients & heures' },
+    { to: '/admin/agendas', icon: Calendar, label: 'Agendas' },
     { to: '/admin/import', icon: Upload, label: 'Importer Excel' },
   ],
   prof: [
     { to: '/prof', icon: LayoutDashboard, label: 'Mon planning' },
-    { to: '/prof/tef', icon: FileText, label: 'Sessions TEF IRN' },
-    { to: '/prof/documents', icon: BookOpen, label: 'Documents' },
+    { to: '/prof/agenda', icon: Calendar, label: 'Mon agenda' },
   ],
   vendeur: [
     { to: '/vendeur', icon: LayoutDashboard, label: 'Mon espace' },
-    { to: '/vendeur/conges', icon: Umbrella, label: 'Mes congés' },
+    { to: '/vendeur/agenda', icon: Calendar, label: 'Mon agenda' },
   ],
   client: [
     { to: '/client', icon: LayoutDashboard, label: 'Mon suivi' },
-    { to: '/client/heures', icon: Calendar, label: 'Mes heures' },
   ],
 }
 
@@ -49,9 +47,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-surface">
-      {/* Sidebar */}
       <aside className="w-60 bg-card border-r border-gray-100 flex flex-col shrink-0">
-        {/* Logo */}
         <div className="px-5 py-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-brand rounded-xl flex items-center justify-center shadow-sm">
@@ -64,7 +60,6 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {nav.map(({ to, icon: Icon, label }) => (
             <NavLink
@@ -85,7 +80,6 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        {/* Profil + déconnexion */}
         <div className="px-3 py-4 border-t border-gray-100">
           <div className="px-3 py-2 mb-2">
             <p className="text-sm font-medium text-gray-900 truncate">
@@ -103,7 +97,6 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      {/* Contenu principal */}
       <main className="flex-1 overflow-auto">
         <div className="max-w-5xl mx-auto px-8 py-8">
           {children}
