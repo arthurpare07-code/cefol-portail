@@ -1,8 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import {
-  LayoutDashboard, Calendar, Users, Upload, LogOut, BookOpen, ClipboardList
-} from 'lucide-react'
+import { LayoutDashboard, Calendar, Users, Upload, LogOut, BookOpen, ClipboardList } from 'lucide-react'
 
 const navByRole = {
   admin: [
@@ -68,9 +66,7 @@ export default function Layout({ children }) {
               end
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-brand-light text-brand'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  isActive ? 'bg-brand-light text-brand' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`
               }
             >
