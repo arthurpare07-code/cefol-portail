@@ -1,14 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 export default function Login() {
-  const { signIn, signInMagicLink } = useAuth()
+  const { signIn, signInMagicLink, user } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState('password')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  useEffect(() => {
+    if (user) navigate('/')
+  }, [user, navigate])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -19,6 +25,7 @@ export default function Login() {
       if (mode === 'password') {
         const { error } = await signIn(email, password)
         if (error) setError('Erreur : ' + error.message)
+        else navigate('/')
       } else {
         const { error } = await signInMagicLink(email)
         if (error) setError('Erreur : ' + error.message)
